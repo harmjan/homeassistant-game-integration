@@ -75,6 +75,18 @@ impl DebounceRisingEdge {
     }
 }
 
+/// Resize frame b so it matches the size of frame a
+fn resize_frames_to_match(frame_a: &Mat, frame_b: &mut Mat) -> opencv::Result<()> {
+    if frame_a.size()? != frame_b.size()? {
+        // If the images aren't the same size resize frame_b
+        let mut resized_frame_b = Mat::default();
+        resize_def(frame_b, &mut resized_frame_b, frame_a.size()?)?;
+        resized_frame_b.copy_to(frame_b)?;
+    }
+
+    Ok(())
+}
+
 /// Return if the screens contains the dark souls "You died" text
 ///
 /// In dark souls remastered the game draws a band from left to right that is darker than the rest
@@ -95,6 +107,9 @@ fn is_dark_souls_you_died(you_died: &Mat, frame: &Mat) -> bool {
         .unwrap()
     };
 
+    // Resize the reference if it is somehow different from the actual ROI
+    resize_frames_to_match(&you_died_roi, you_died).unwrap();
+
     // Extract the red channel
     let mut red = Mat::default();
     extract_channel(&you_died_roi, &mut red, 2).unwrap();
@@ -109,7 +124,7 @@ fn is_dark_souls_you_died(you_died: &Mat, frame: &Mat) -> bool {
 }
 
 fn main() {
-    let mut no_video = imread_def("no-video.png").unwrap();
+    let mut nzxt_no_video = imread_def("no-video.png").unwrap();
     let you_died_original = imread_def("youdied.png").unwrap();
     let mut you_died = Mat::default();
     extract_channel(&you_died_original, &mut you_died, 2).unwrap();
@@ -127,14 +142,8 @@ fn main() {
         frame_rate_counter.feed();
 
         // Try to detect if the no-video screen is on
-        if no_video.size().unwrap() != frame.size().unwrap() {
-            // If the images aren't the same size resize the no_video frame we have
-            let mut no_video_new = Mat::default();
-            resize_def(&no_video, &mut no_video_new, frame.size().unwrap())
-                .expect("Failed to resize");
-            no_video = no_video_new;
-        }
-        let absolute_difference = norm2_def(&frame, &no_video).unwrap();
+        resize_frames_to_match(&frame, &mut nzxt_no_video).unwrap();
+        let absolute_difference = norm2_def(&frame, &nzxt_no_video).unwrap();
         let has_stream = absolute_difference > 5000f64;
 
         if has_stream {
