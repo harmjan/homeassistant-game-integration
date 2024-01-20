@@ -16,16 +16,17 @@ const DEBUG_WINDOW: bool = true;
 const HOMEASSISTANT_HOST: &str = "http://server.local:8123";
 const HOMEASSISTANT_WEBHOOK_ID: &str = "office-dark-souls-dead";
 
-struct Counter {
+/// Count events in a period to calculate an FPS
+struct EventRateCounter {
     max_duration: Duration,
     instants: VecDeque<Instant>,
 }
 
-impl Counter {
-    fn new() -> Counter {
+impl EventRateCounter {
+    fn new() -> EventRateCounter {
         let mut instants = VecDeque::new();
         instants.push_front(Instant::now());
-        Counter {
+        EventRateCounter {
             instants,
             max_duration: Duration::from_secs(60),
         }
@@ -50,6 +51,8 @@ impl Counter {
     }
 }
 
+/// The webhook only needs to get called once, only pass the true result on once for a stretch of
+/// true signals
 struct DebounceRisingEdge {
     period: Duration,
     last_rising: Instant,
@@ -117,13 +120,13 @@ fn main() {
 
     let mut cap = VideoCapture::new_def(0).expect("Failed to open webcam");
 
-    let mut counter = Counter::new();
+    let mut frame_rate_counter = EventRateCounter::new();
     let mut dead_event_dark_souls = DebounceRisingEdge::new();
     loop {
         let mut frame = Mat::default();
         // Read the frame from the stream
         cap.read(&mut frame).expect("Failed to read frame");
-        counter.feed();
+        frame_rate_counter.feed();
 
         // Try to detect if the no-video screen is on
         if no_video.size().unwrap() != frame.size().unwrap() {
@@ -165,7 +168,7 @@ fn main() {
 
         // Print the FPS counter on the
         if DEBUG_WINDOW {
-            let fps_string = format!("fps: {:.2}", counter.get_fps());
+            let fps_string = format!("fps: {:.2}", frame_rate_counter.get_fps());
             put_text_def(
                 &mut frame,
                 fps_string.as_str(),
