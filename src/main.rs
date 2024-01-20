@@ -1,9 +1,8 @@
-use opencv::core::{extract_channel, norm2_def, Point, Ptr, Rect, Scalar};
+use opencv::core::{extract_channel, norm2_def, Point, Rect, Scalar};
 use opencv::highgui::{destroy_all_windows, imshow, named_window_def, wait_key};
 use opencv::imgcodecs::imread_def;
 use opencv::imgproc::{put_text_def, resize_def, threshold, FONT_HERSHEY_SIMPLEX, THRESH_BINARY};
 use opencv::prelude::*;
-use opencv::text::OCRTesseract;
 use opencv::videoio::VideoCapture;
 
 use reqwest;
@@ -83,7 +82,7 @@ impl DebounceRisingEdge {
 ///
 /// There were other project who did something similar like:
 ///  - https://github.com/TristoKrempita/ds-death-counter/blob/master/frames.py
-fn is_dark_souls_you_died(you_died: &Mat, tesseract: &mut Ptr<OCRTesseract>, frame: &Mat) -> bool {
+fn is_dark_souls_you_died(you_died: &Mat, frame: &Mat) -> bool {
     // Try to extract the square where the YOU DIED will be as the region of interest
     let you_died_roi = {
         let frame_size = frame.size().unwrap();
@@ -114,7 +113,6 @@ fn main() {
     let you_died_original = imread_def("youdied.png").unwrap();
     let mut you_died = Mat::default();
     extract_channel(&you_died_original, &mut you_died, 2).unwrap();
-    let mut tesseract = OCRTesseract::create_def().unwrap();
 
     named_window_def("game").expect("Failed to create window");
 
@@ -140,8 +138,7 @@ fn main() {
         let has_stream = absolute_difference > 5000f64;
 
         if has_stream {
-            if dead_event_dark_souls.feed(is_dark_souls_you_died(&you_died, &mut tesseract, &frame))
-            {
+            if dead_event_dark_souls.feed(is_dark_souls_you_died(&you_died, &frame)) {
                 let client = reqwest::blocking::Client::new();
                 client
                     .post(format!(
