@@ -1,10 +1,7 @@
-use opencv::core::{extract_channel, min_max_loc, norm2_def, Point, Ptr, Rect, Scalar};
+use opencv::core::{extract_channel, norm2_def, Point, Ptr, Rect, Scalar};
 use opencv::highgui::{destroy_all_windows, imshow, named_window_def, wait_key};
 use opencv::imgcodecs::imread_def;
-use opencv::imgproc::{
-    match_template_def, put_text_def, resize_def, threshold, FONT_HERSHEY_SIMPLEX, THRESH_BINARY,
-    TM_CCOEFF_NORMED,
-};
+use opencv::imgproc::{put_text_def, resize_def, threshold, FONT_HERSHEY_SIMPLEX, THRESH_BINARY};
 use opencv::prelude::*;
 use opencv::text::OCRTesseract;
 use opencv::videoio::VideoCapture;
@@ -81,24 +78,10 @@ impl DebounceRisingEdge {
 /// In dark souls remastered the game draws a band from left to right that is darker than the rest
 /// of the screen with the text "YOU DIED" in red over it.
 ///
-/// Screen is 1054x592
-/// (left: 320, right: 727, pixel)
-/// (top: 270, bottom: 350)
+/// There were other project who did something similar like:
+///  - https://github.com/TristoKrempita/ds-death-counter/blob/master/frames.py
 fn is_dark_souls_you_died(you_died: &Mat, tesseract: &mut Ptr<OCRTesseract>, frame: &Mat) -> bool {
-    // Copied from https://github.com/TristoKrempita/ds-death-counter/blob/master/frames.py
-    /*
-    let mut match_result = Mat::default();
-    match_template_def(frame, you_died, &mut match_result, TM_CCOEFF_NORMED)
-        .expect("Failed to match template");
-    let mask = Mat::default();
-    let mut max_val = 0f64;
-    min_max_loc(&match_result, None, Some(&mut max_val), None, None, &mask)
-        .expect("Failed to find max");
-
-    max_val >= 0.2f64
-    */
-
-    // Try to extract the square where the YOU DIED will be
+    // Try to extract the square where the YOU DIED will be as the region of interest
     let you_died_roi = {
         let frame_size = frame.size().unwrap();
         let (mid_x, mid_y) = (frame_size.width / 2, frame_size.height * 21 / 40);
