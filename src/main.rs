@@ -16,6 +16,9 @@ use std::time::{Duration, Instant};
 
 const DEBUG_WINDOW: bool = true;
 
+const HOMEASSISTANT_HOST: &str = "http://server.local:8123";
+const HOMEASSISTANT_WEBHOOK_ID: &str = "office-dark-souls-dead";
+
 struct Counter {
     max_duration: Duration,
     instants: VecDeque<Instant>,
@@ -155,7 +158,10 @@ fn main() {
             {
                 let client = reqwest::blocking::Client::new();
                 client
-                    .post("http://server.local:8123/api/webhook/office-dark-souls-dead")
+                    .post(format!(
+                        "{}/api/webhook/{}",
+                        HOMEASSISTANT_HOST, HOMEASSISTANT_WEBHOOK_ID
+                    ))
                     .send()
                     .expect("Failed to post webhook")
                     .error_for_status()
