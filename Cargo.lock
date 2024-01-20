@@ -130,6 +130,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
+name = "dark-souls-homeassistant"
+version = "0.1.0"
+dependencies = [
+ "opencv",
+ "reqwest",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -455,14 +463,6 @@ name = "log"
 version = "0.4.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
-
-[[package]]
-name = "mario-kart-homeassistant"
-version = "0.1.0"
-dependencies = [
- "opencv",
- "reqwest",
-]
 
 [[package]]
 name = "memchr"
