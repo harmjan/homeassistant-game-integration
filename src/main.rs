@@ -94,33 +94,32 @@ fn resize_frames_to_match(frame_a: &Mat, frame_b: &mut Mat) -> opencv::Result<()
 ///
 /// There were other project who did something similar like:
 ///  - https://github.com/TristoKrempita/ds-death-counter/blob/master/frames.py
-fn is_dark_souls_you_died(you_died: &Mat, frame: &Mat) -> bool {
+fn is_dark_souls_you_died(you_died: &mut Mat, frame: &Mat) -> opencv::Result<bool> {
     // Try to extract the square where the YOU DIED will be as the region of interest
     let you_died_roi = {
-        let frame_size = frame.size().unwrap();
+        let frame_size = frame.size()?;
         let (mid_x, mid_y) = (frame_size.width / 2, frame_size.height * 21 / 40);
         let (width, height) = (frame_size.width * 2 / 5, frame_size.height * 3 / 20);
         Mat::roi(
             &frame,
             Rect::new(mid_x - width / 2, mid_y - height / 2, width, height),
-        )
-        .unwrap()
+        )?
     };
 
     // Resize the reference if it is somehow different from the actual ROI
-    resize_frames_to_match(&you_died_roi, you_died).unwrap();
+    resize_frames_to_match(&you_died_roi, you_died)?;
 
     // Extract the red channel
     let mut red = Mat::default();
-    extract_channel(&you_died_roi, &mut red, 2).unwrap();
+    extract_channel(&you_died_roi, &mut red, 2)?;
     // Create a binary threshold
     let mut threshold_red = Mat::default();
-    threshold(&red, &mut threshold_red, 100f64, 255f64, THRESH_BINARY).unwrap();
-    // Compare the image with the saved one
-    let absolute_difference = norm2_def(&threshold_red, &you_died).unwrap();
-    imshow("game", &threshold_red).expect("Failed to draw frame");
+    threshold(&red, &mut threshold_red, 100f64, 255f64, THRESH_BINARY)?;
 
-    absolute_difference < 5000f64
+    // Compare the image with the saved one
+    let absolute_difference = norm2_def(&threshold_red, you_died)?;
+
+    Ok(absolute_difference < 5000f64)
 }
 
 fn main() {
@@ -147,7 +146,10 @@ fn main() {
         let has_stream = absolute_difference > 5000f64;
 
         if has_stream {
-            if dead_event_dark_souls.feed(is_dark_souls_you_died(&you_died, &frame)) {
+            if dead_event_dark_souls.feed(
+                is_dark_souls_you_died(&mut you_died, &frame)
+                    .expect("Failed to run YOU DIED detection"),
+            ) {
                 let client = reqwest::blocking::Client::new();
                 client
                     .post(format!(
