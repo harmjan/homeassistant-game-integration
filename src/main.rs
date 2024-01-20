@@ -10,7 +10,7 @@ use reqwest;
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-const DEBUG_WINDOW: bool = true;
+const DEBUG_WINDOW: bool = false;
 
 const HOMEASSISTANT_HOST: &str = "http://server.local:8123";
 const HOMEASSISTANT_WEBHOOK_ID: &str = "office-dark-souls-dead";
@@ -128,7 +128,9 @@ fn main() {
     let mut you_died = Mat::default();
     extract_channel(&you_died_original, &mut you_died, 2).unwrap();
 
-    named_window_def("game").expect("Failed to create window");
+    if DEBUG_WINDOW {
+        named_window_def("game").expect("Failed to create window");
+    }
 
     let mut cap = VideoCapture::new_def(0).expect("Failed to open webcam");
 
@@ -162,7 +164,7 @@ fn main() {
                     .expect("Webhook didn't return good status code");
             }
         } else {
-            let diff_string = format!("Not running anything");
+            let diff_string = format!("No device connected");
             put_text_def(
                 &mut frame,
                 diff_string.as_str(),
@@ -187,7 +189,7 @@ fn main() {
             )
             .expect("Failed to put text on the screen");
 
-            //imshow("game", &frame).expect("Failed to draw frame");
+            imshow("game", &frame).expect("Failed to draw frame");
         }
 
         if wait_key(1).expect("Failed to wait for key") & 0xFF == 'q' as i32 {
