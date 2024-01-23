@@ -4,76 +4,15 @@ use opencv::imgcodecs::imread_def;
 use opencv::imgproc::{put_text_def, resize_def, threshold, FONT_HERSHEY_SIMPLEX, THRESH_BINARY};
 use opencv::prelude::*;
 use opencv::videoio::VideoCapture;
-
 use reqwest;
 
-use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+mod counter;
+mod debounce;
 
 const DEBUG_WINDOW: bool = false;
 
 const HOMEASSISTANT_HOST: &str = "http://server.local:8123";
 const HOMEASSISTANT_WEBHOOK_ID: &str = "office-dark-souls-dead";
-
-/// Count events in a period to calculate an FPS
-struct EventRateCounter {
-    max_duration: Duration,
-    instants: VecDeque<Instant>,
-}
-
-impl EventRateCounter {
-    fn new() -> EventRateCounter {
-        let mut instants = VecDeque::new();
-        instants.push_front(Instant::now());
-        EventRateCounter {
-            instants,
-            max_duration: Duration::from_secs(60),
-        }
-    }
-
-    fn feed(&mut self) {
-        self.instants.push_front(Instant::now());
-        // Remove instants that are too old but always keep 2
-        while self.instants.len() > 2 && self.total_duration() >= self.max_duration {
-            self.instants.pop_back().unwrap();
-        }
-    }
-
-    fn total_duration(&self) -> Duration {
-        *self.instants.front().unwrap() - *self.instants.back().unwrap()
-    }
-
-    fn get_fps(&self) -> f32 {
-        let duration_per_frame = self.total_duration() / self.instants.len() as u32;
-
-        1f32 / duration_per_frame.as_secs_f32()
-    }
-}
-
-/// The webhook only needs to get called once, only pass the true result on once for a stretch of
-/// true signals
-struct DebounceRisingEdge {
-    period: Duration,
-    last_rising: Instant,
-}
-
-impl DebounceRisingEdge {
-    fn new() -> DebounceRisingEdge {
-        DebounceRisingEdge {
-            period: Duration::from_secs(5),
-            last_rising: Instant::now(),
-        }
-    }
-
-    fn feed(&mut self, event: bool) -> bool {
-        let now = Instant::now();
-        let result = event && (now - self.last_rising) >= self.period;
-        if event {
-            self.last_rising = now;
-        }
-        result
-    }
-}
 
 /// Resize frame b so it matches the size of frame a
 fn resize_frames_to_match(frame_a: &Mat, frame_b: &mut Mat) -> opencv::Result<()> {
@@ -134,8 +73,8 @@ fn main() {
 
     let mut cap = VideoCapture::new_def(0).expect("Failed to open webcam");
 
-    let mut frame_rate_counter = EventRateCounter::new();
-    let mut dead_event_dark_souls = DebounceRisingEdge::new();
+    let mut frame_rate_counter = counter::EventRateCounter::new();
+    let mut dead_event_dark_souls = debounce::DebounceRisingEdge::new();
     loop {
         let mut frame = Mat::default();
         // Read the frame from the stream
@@ -178,7 +117,7 @@ fn main() {
 
         // Print the FPS counter on the
         if DEBUG_WINDOW {
-            let fps_string = format!("fps: {:.2}", frame_rate_counter.get_fps());
+            let fps_string = format!("fps: {:.2}", frame_rate_counter.get_event_rate_per_second());
             put_text_def(
                 &mut frame,
                 fps_string.as_str(),
