@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 opencv = "0.88.8"
 reqwest = { version = "0.11.23", features = ["blocking"] }
+serde = { version = "1.0.195", features = ["derive"] }
+thiserror = "1.0.56"
+toml = "0.8.8"

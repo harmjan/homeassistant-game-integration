@@ -1,0 +1,5 @@
+debug_window = true
+
+[dark_souls.you_died]
+type = "webhook"
+url = "http://server.local:8123/api/webhook/office-dark-souls-dead"

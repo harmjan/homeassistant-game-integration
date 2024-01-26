@@ -4,15 +4,11 @@ use opencv::imgcodecs::imread_def;
 use opencv::imgproc::{put_text_def, resize_def, threshold, FONT_HERSHEY_SIMPLEX, THRESH_BINARY};
 use opencv::prelude::*;
 use opencv::videoio::VideoCapture;
-use reqwest;
 
+mod action;
+mod config;
 mod counter;
 mod debounce;
-
-const DEBUG_WINDOW: bool = false;
-
-const HOMEASSISTANT_HOST: &str = "http://server.local:8123";
-const HOMEASSISTANT_WEBHOOK_ID: &str = "office-dark-souls-dead";
 
 /// Resize frame b so it matches the size of frame a
 fn resize_frames_to_match(frame_a: &Mat, frame_b: &mut Mat) -> opencv::Result<()> {
@@ -62,12 +58,15 @@ fn is_dark_souls_you_died(you_died: &mut Mat, frame: &Mat) -> opencv::Result<boo
 }
 
 fn main() {
+    // Load the config
+    let config = config::load_config("config.toml");
+
     let mut nzxt_no_video = imread_def("no-video.png").unwrap();
     let you_died_original = imread_def("youdied.png").unwrap();
     let mut you_died = Mat::default();
     extract_channel(&you_died_original, &mut you_died, 2).unwrap();
 
-    if DEBUG_WINDOW {
+    if config.debug_window {
         named_window_def("game").expect("Failed to create window");
     }
 
@@ -86,21 +85,20 @@ fn main() {
         let absolute_difference = norm2_def(&frame, &nzxt_no_video).unwrap();
         let has_stream = absolute_difference > 5000f64;
 
+        // Only run any detection algorithms if there is a stream
         if has_stream {
-            if dead_event_dark_souls.feed(
-                is_dark_souls_you_died(&mut you_died, &frame)
-                    .expect("Failed to run YOU DIED detection"),
-            ) {
-                let client = reqwest::blocking::Client::new();
-                client
-                    .post(format!(
-                        "{}/api/webhook/{}",
-                        HOMEASSISTANT_HOST, HOMEASSISTANT_WEBHOOK_ID
-                    ))
-                    .send()
-                    .expect("Failed to post webhook")
-                    .error_for_status()
-                    .expect("Webhook didn't return good status code");
+            // Extract the darks souls configuration
+            if let Some(ref dark_souls_config) = config.dark_souls {
+                // Extract the YOU DIED action if configured
+                if let Some(ref you_died_action) = dark_souls_config.you_died {
+                    // Run the YOU DIED detection
+                    if dead_event_dark_souls.feed(
+                        is_dark_souls_you_died(&mut you_died, &frame)
+                            .expect("Failed to run YOU DIED detection"),
+                    ) {
+                        you_died_action.execute().expect("Failed to execute action");
+                    }
+                }
             }
         } else {
             let diff_string = format!("No device connected");
@@ -116,7 +114,7 @@ fn main() {
         }
 
         // Print the FPS counter on the
-        if DEBUG_WINDOW {
+        if config.debug_window {
             let fps_string = format!("fps: {:.2}", frame_rate_counter.get_event_rate_per_second());
             put_text_def(
                 &mut frame,
