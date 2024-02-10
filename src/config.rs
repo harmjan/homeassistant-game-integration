@@ -2,19 +2,13 @@ use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
-use crate::action;
-
-/// The dark souls module config
-#[derive(Deserialize)]
-pub struct DarkSoulsConfig {
-    pub you_died: Option<action::Config>,
-}
+use crate::darksouls;
 
 /// The application config
 #[derive(Deserialize)]
 pub struct Config {
     pub debug_window: bool,
-    pub dark_souls: Option<DarkSoulsConfig>,
+    pub dark_souls: Option<darksouls::Config>,
 }
 
 /// Load the application config from the given file
