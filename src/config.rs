@@ -2,12 +2,15 @@ use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
+use crate::action;
 use crate::darksouls;
 
 /// The application config
 #[derive(Deserialize)]
 pub struct Config {
     pub debug_window: bool,
+    pub stream_on: Option<action::Config>,
+    pub stream_off: Option<action::Config>,
     pub dark_souls: Option<darksouls::Config>,
 }
 

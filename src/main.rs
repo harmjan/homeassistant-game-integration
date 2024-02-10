@@ -31,6 +31,8 @@ fn main() {
     let mut cap = VideoCapture::new_def(0).expect("Failed to open webcam");
 
     let mut frame_rate_counter = counter::EventRateCounter::new();
+    let mut debounce_stream_on = debounce::DebounceRisingEdge::new();
+    let mut debounce_stream_off = debounce::DebounceRisingEdge::new();
     loop {
         let mut frame = Mat::default();
         // Read the frame from the stream
@@ -41,6 +43,17 @@ fn main() {
         util::resize_frames_to_match(&frame, &mut nzxt_no_video).unwrap();
         let absolute_difference = norm2_def(&frame, &nzxt_no_video).unwrap();
         let has_stream = absolute_difference > 5000f64;
+
+        if debounce_stream_on.feed(has_stream) {
+            if let Some(ref stream_on_action) = config.stream_on {
+                stream_on_action.execute().unwrap();
+            }
+        }
+        if debounce_stream_off.feed(!has_stream) {
+            if let Some(ref stream_off_action) = config.stream_off {
+                stream_off_action.execute().unwrap();
+            }
+        }
 
         // Only run any detection algorithms if there is a stream
         if has_stream {

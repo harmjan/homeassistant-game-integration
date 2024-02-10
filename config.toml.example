@@ -1,5 +1,13 @@
 debug_window = true
 
+[stream_on]
+type = "webhook"
+url = "http://server.local:8123/api/webhook/stream-on"
+
+[stream_off]
+type = "webhook"
+url = "http://server.local:8123/api/webhook/stream-off"
+
 [dark_souls.you_died]
 type = "webhook"
 url = "http://server.local:8123/api/webhook/office-dark-souls-dead"
